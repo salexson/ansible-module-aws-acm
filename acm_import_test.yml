@@ -1,0 +1,38 @@
+---
+- hosts: localhost
+  vars:
+    - region: 'us-east-1'
+  tasks:
+    - name: Connect to AWS
+      sts_assume_role:
+        aws_access_key: 'XXXXXXXXXXXXXXXXXXXX'
+        aws_secret_key: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+        region: '{{ region }}'
+        role_session_name: 'ACM_Test'
+        role_arn: 'arn:aws:iam::XXXXXXXXXXXX:role/XXXXXXXXXX'
+      register: assumed_role
+      delegate_to: localhost
+      run_once: True
+
+    - name: Test import cert
+      acm_import:
+        name: 'SA_Test_Cert_Update'
+        state: present
+        aws_access_key: '{{ assumed_role.sts_creds.access_key }}'
+        aws_secret_key: '{{ assumed_role.sts_creds.secret_key }}'
+        security_token: '{{ assumed_role.sts_creds.session_token }}'
+        region: '{{ region }}'
+        cert: 'files/mypubcert.pem'
+        key: 'files/myprivkey.pem'
+        cert_chain: 'files/cacert_chain.pem'
+      register: certinfo
+
+
+    - name: Test delete cert
+      acm_import:
+        state: absent
+        aws_access_key: '{{ assumed_role.sts_creds.access_key }}'
+        aws_secret_key: '{{ assumed_role.sts_creds.secret_key }}'
+        security_token: '{{ assumed_role.sts_creds.session_token }}'
+        region: '{{ region }}'
+        cert_arn: '{{ certinfo.cert_arn }}'
